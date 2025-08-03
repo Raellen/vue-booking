@@ -1,11 +1,84 @@
 {
-  "rooms": [
-    { "id": 1, "name": "天樞會議室", "capacity": 10 },
-    { "id": 2, "name": "搖光會議室", "capacity": 6 },
-    { "id": 3, "name": "開陽討論室", "capacity": 4 }
+  "users": [
+    {
+      "id": "admin-user",
+      "name": "管理者",
+      "email": "admin@example.com",
+      "role": "admin"
+    },
+    {
+      "id": "client-user-1",
+      "name": "客戶A (林美麗)",
+      "email": "mary@example.com",
+      "role": "client"
+    },
+    {
+      "id": "client-user-2",
+      "name": "客戶B (王小明)",
+      "email": "ming@example.com",
+      "role": "client"
+    }
+  ],
+  "availability": [
+    {
+      "id": "singleton",
+      "schedule": {
+        "0": {
+          "active": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        "1": {
+          "active": true,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        "2": {
+          "active": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        "3": {
+          "active": true,
+          "start": "10:00",
+          "end": "18:00"
+        },
+        "4": {
+          "active": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        "5": {
+          "active": true,
+          "start": "09:00",
+          "end": "12:00"
+        },
+        "6": {
+          "active": false,
+          "start": "09:00",
+          "end": "17:00"
+        }
+      }
+    }
   ],
   "bookings": [
-    { "id": 1, "roomId": 1, "userId": 1, "title": "週會", "start": "2025-08-04T10:00:00", "end": "2025-08-04T11:00:00" },
-    { "id": 2, "roomId": 2, "userId": 2, "title": "產品設計審核", "start": "2025-08-04T14:00:00", "end": "2025-08-04T15:30:00" }
+    {
+      "id": "booking-1",
+      "userId": "client-user-1",
+      "userName": "客戶A (林美麗)",
+      "dateTime": "2025-08-11T10:30:00"
+    },
+    {
+      "id": "booking-2",
+      "userId": "client-user-2",
+      "userName": "客戶B (王小明)",
+      "dateTime": "2025-08-13T14:00:00"
+    },
+    {
+      "id": "c5d6",
+      "userId": "admin-user",
+      "userName": "管理者",
+      "dateTime": "2025-08-04T06:30:00.000Z"
+    }
   ]
 }

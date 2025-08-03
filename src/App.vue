@@ -1,126 +1,107 @@
+<script setup>
+import { ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from '@/stores/auth';
+import { useAppStore } from '@/stores/app';
+
+const route = useRoute();
+const authStore = useAuthStore();
+const appStore = useAppStore();
+
+const { isAuthenticated, user, userInitials, userName, userEmail } = storeToRefs(authStore);
+const { globalLoading, snackbar } = storeToRefs(appStore);
+const { logout } = authStore;
+
+const drawer = ref(null);
+
+const pageTitle = ref('');
+watch(route, (to) => {
+  pageTitle.value = to.meta.title || '';
+}, { immediate: true });
+</script>
+
 <template>
   <v-app>
-    <v-main>
-      <v-container fluid>
-        <!-- 頁面標題 -->
-        <v-row align="center">
-          <v-col cols="12" md="8">
-            <h1 class="text-h4 font-weight-bold text-grey-darken-3">會議室即時預訂系統</h1>
-            <p class="text-subtitle-1 text-grey">點擊日曆上的日期或事件來新增/編輯預訂</p>
-          </v-col>
-           <v-col cols="12" md="4" class="text-md-right">
-            <v-alert
-              v-if="!store.isLoading"
-              type="success"
-              icon="mdi-wifi"
-              variant="tonal"
-              closable
-              class="mb-2"
-            >
-              資料已同步，可接收即時更新。
-            </v-alert>
-          </v-col>
-        </v-row>
+    <!-- 全域讀取指示器 -->
+    <div v-if="globalLoading" class="loading-overlay">
+      <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
+    </div>
 
-        <!-- 日曆元件 -->
-        <v-row>
-          <v-col>
-            <v-card elevation="2" class="rounded-lg">
-               <v-overlay v-model="store.isLoading" contained class="align-center justify-center">
-                  <v-progress-circular color="primary" indeterminate size="64"></v-progress-circular>
-               </v-overlay>
-              <v-calendar
-                :events="store.events"
-                color="primary"
-                type="month"
-                @click:event="handleEventClick"
-                @click:date="handleDateClick"
-              ></v-calendar>
-            </v-card>
-          </v-col>
-        </v-row>
+    <!-- 導覽側邊欄 -->
+    <v-navigation-drawer v-if="isAuthenticated" v-model="drawer">
+      <v-list-item prepend-icon="mdi-calendar-clock" title="預約系統" :subtitle="user.role === 'admin' ? '管理者模式' : '客戶模式'"></v-list-item>
+      <v-divider></v-divider>
+      <v-list density="compact" nav>
+        <!-- 公用選單 -->
+        <v-list-item prepend-icon="mdi-view-dashboard" title="儀表板" value="dashboard" to="/"></v-list-item>
+        <v-list-item prepend-icon="mdi-calendar-search" title="預約服務" value="booking" to="/book-appointment"></v-list-item>
+        
+        <!-- 客戶專用選單 -->
+        <template v-if="user && user.role === 'client'">
+          <v-list-item prepend-icon="mdi-calendar-check" title="我的預約" value="my-bookings" to="/my-bookings"></v-list-item>
+        </template>
 
-        <!-- 彈出視窗元件 -->
-        <BookingDialog
-          v-model="isDialogVisible"
-          :event-data="selectedEvent"
-          :rooms="store.rooms"
-          @save="handleSave"
-          @delete="handleDelete"
-        />
+        <!-- 管理者專用選單 -->
+        <template v-if="user && user.role === 'admin'">
+          <v-list-item prepend-icon="mdi-calendar-multiple" title="所有預約" value="all-bookings" to="/all-bookings"></v-list-item>
+          <v-list-item prepend-icon="mdi-cog" title="時段設定" value="admin" to="/admin"></v-list-item>
+        </template>
+      </v-list>
+    </v-navigation-drawer>
 
-        <!-- 操作結果提示 (Snackbar) -->
-        <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">
-          {{ snackbar.text }}
-          <template v-slot:actions>
-            <v-btn color="white" variant="text" @click="snackbar.show = false">關閉</v-btn>
-          </template>
-        </v-snackbar>
-      </v-container>
+    <!-- 頂部應用欄 -->
+    <v-app-bar v-if="isAuthenticated">
+      <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
+      <v-toolbar-title>{{ pageTitle }}</v-toolbar-title>
+      <v-spacer></v-spacer>
+      <v-menu>
+        <template v-slot:activator="{ props }">
+          <v-btn icon v-bind="props">
+            <v-avatar color="primary" size="36">
+              <span class="text-subtitle-1">{{ userInitials }}</span>
+            </v-avatar>
+          </v-btn>
+        </template>
+        <v-list>
+          <v-list-item :title="userName" :subtitle="userEmail"></v-list-item>
+          <v-divider></v-divider>
+          <v-list-item prepend-icon="mdi-logout" title="登出" @click="logout"></v-list-item>
+        </v-list>
+      </v-menu>
+    </v-app-bar>
+
+    <!-- 主要內容區 -->
+    <v-main class="bg-grey-lighten-4">
+      <router-view v-slot="{ Component }">
+        <v-fade-transition mode="out-in">
+          <component :is="Component" />
+        </v-fade-transition>
+      </router-view>
     </v-main>
+
+    <!-- 全域通知條 -->
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">
+      {{ snackbar.text }}
+      <template v-slot:actions>
+        <v-btn color="white" variant="text" @click="snackbar.show = false">關閉</v-btn>
+      </template>
+    </v-snackbar>
   </v-app>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue';
-import { useBookingStore } from '@/stores/bookingStore'; // 請確認路徑是否正確
-import BookingDialog from '@/components/BookingDialog.vue'; // 請確認路徑是否正確
-
-// 初始化 Store
-const store = useBookingStore();
-
-// 本地狀態
-const isDialogVisible = ref(false);
-const selectedEvent = ref({});
-const snackbar = ref({ show: false, text: '', color: 'success' });
-
-// --- 事件處理 (Event Handlers) ---
-const handleEventClick = ({ event }) => {
-  selectedEvent.value = { ...event.raw }; // 取得原始資料
-  isDialogVisible.value = true;
-};
-
-const handleDateClick = ({ date }) => {
-  selectedEvent.value = {
-    title: '',
-    roomId: null,
-    start: date.toISOString().split('T')[0],
-    end: date.toISOString().split('T')[0],
-    color: '#3F51B5',
-  };
-  isDialogVisible.value = true;
-};
-
-const handleSave = async (eventData) => {
-  try {
-    await store.saveBooking(eventData);
-    showSnackbar('預訂已成功儲存！');
-    isDialogVisible.value = false;
-  } catch (error) {
-    showSnackbar('儲存失敗，請稍後再試。', 'error');
-  }
-};
-
-const handleDelete = async (bookingId) => {
-  if (confirm('您確定要刪除這個預訂嗎？')) {
-    try {
-      await store.deleteBooking(bookingId);
-      showSnackbar('預訂已刪除。', 'info');
-      isDialogVisible.value = false;
-    } catch (error) {
-      showSnackbar('刪除失敗，請稍後再試。', 'error');
-    }
-  }
-};
-
-const showSnackbar = (text, color = 'success') => {
-  snackbar.value.text = text;
-  snackbar.value.color = color;
-  snackbar.value.show = true;
-};
-
-// --- 生命週期 ---
-onMounted(() => {
-  store.initializeData();
-});
-</script>
+<style>
+/* 全域樣式 */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+</style>
